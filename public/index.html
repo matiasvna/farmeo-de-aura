@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0d0b14">
+  <meta name="description" content="Gestión y Farmeo de Aura - Torneo de aura LOOKMAXING ZYZZ RIZZ GIGACHAD SIXSEVEN. Ranking en tiempo real, suma/resta de aura y Tribunal de Apelaciones.">
+  <title>🔥🔥 TORNEO DE AURA 🗿</title>
+
+  <!-- Google Fonts: Space Grotesk & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Background Glow & Particles FX -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+  <div class="bg-grid"></div>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Modal Confirmación Tribunal -->
+  <div id="tribunal-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="tribunal-modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="tribunal-modal-title">⚖️ Veredicto del Tribunal</h3>
+        <button id="btn-close-tribunal-modal" class="btn-icon" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="modal-body" id="tribunal-modal-body">
+        <!-- Contenido dinámico inyectado por JS -->
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-revert" class="btn btn-secondary">Cancelar</button>
+        <button id="btn-confirm-revert" class="btn btn-danger">Confirmar Castigo 🔨</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Traza / Historial de Auditoría de Aura por Participante -->
+  <div id="traza-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="traza-modal-title">
+    <div class="modal-card modal-card-large">
+      <div class="modal-header">
+        <div class="traza-header-info">
+          <div class="traza-avatar" id="traza-user-avatar">🗿</div>
+          <div>
+            <h3 id="traza-modal-title">Historial de Aura: <span id="traza-user-name" class="text-neon-purple">Participante</span></h3>
+            <p class="traza-sub">Quién le sumó o restó aura 🕵️‍♂️</p>
+          </div>
+        </div>
+        <button id="btn-close-traza" class="btn-icon" aria-label="Cerrar modal">&times;</button>
+      </div>
+
+      <!-- Resumen de estadísticas -->
+      <div class="traza-stats-grid">
+        <div class="traza-stat-box net">
+          <span class="stat-lbl">Aura Actual</span>
+          <span class="stat-val" id="traza-stat-net">0</span>
+        </div>
+        <div class="traza-stat-box positive">
+          <span class="stat-lbl">Total Sumado 📈</span>
+          <span class="stat-val" id="traza-stat-positive">+0</span>
+        </div>
+        <div class="traza-stat-box negative">
+          <span class="stat-lbl">Total Restado 📉</span>
+          <span class="stat-val" id="traza-stat-negative">-0</span>
+        </div>
+      </div>
+
+      <div class="modal-body traza-body">
+        <h4 class="traza-timeline-title">Línea de Tiempo de Movimientos</h4>
+        <div id="traza-logs-list" class="traza-timeline">
+          <!-- Inyectado dinámicamente por JS -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-close-traza-footer" class="btn btn-secondary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Lightbox Foto de Perfil (Instagram style) -->
+  <div id="pfp-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Foto de perfil">
+    <div class="pfp-lightbox-card">
+      <button id="btn-close-pfp" class="btn-lightbox-close" aria-label="Cerrar">&times;</button>
+      <div class="pfp-lightbox-img-wrapper">
+        <img id="pfp-lightbox-img" src="" alt="Foto de perfil ampliada" class="pfp-lightbox-img">
+      </div>
+      <div class="pfp-lightbox-info">
+        <div class="pfp-lightbox-name" id="pfp-lightbox-name">Participante</div>
+        <div class="pfp-lightbox-aura" id="pfp-lightbox-aura">0 Aura</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config / Status Bar Banner -->
+  <header class="app-header">
+    <div class="header-inner container">
+      <div class="brand">
+        <div class="brand-badge">TORNEO CICLOTRÓN</div>
+        <h1 class="brand-title">
+          <span>FARMEO DE AURA</span> <span class="brand-emoji">🗿</span>
+        </h1>
+        <p class="brand-motto">Torneo de aura LOOKMAXING ZYZZ RIZZ GIGACHAD SIXSEVEN</p>
+      </div>
+
+      <div class="header-actions">
+        <!-- Tribunal Indicator Pill -->
+        <div id="tribunal-pill" class="tribunal-pill locked" title="Horario del Tribunal: Viernes 08:00 a 16:00 hs">
+          <span class="pill-dot"></span>
+          <span class="pill-text" id="tribunal-pill-status">Tribunal Cerrado 🗿</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER (SPA VIEWS) -->
+  <main class="main-content container">
+
+    <!-- ============================================ -->
+    <!-- VIEW A: LEADERBOARD / RANKING DE AURA        -->
+    <!-- ============================================ -->
+    <section id="view-ranking" class="spa-view active">
+      
+      <!-- Top 1 Sigma Spotlight Hero Card -->
+      <div id="sigma-spotlight" class="sigma-card">
+        <div class="sigma-halo"></div>
+        <div class="sigma-header">
+          <span class="sigma-tag">👑 ALPHA / SIGMA SUPREMO #1</span>
+          <span class="sigma-status">🤫🧏‍♂️ MEWING GOD SIXSEVEN</span>
+        </div>
+        <div class="sigma-body">
+          <div class="sigma-avatar" id="sigma-avatar">🗿</div>
+          <div class="sigma-info">
+            <h2 class="sigma-name" id="sigma-name">Cargando líder...</h2>
+            <div class="sigma-aura-display">
+              <span class="sigma-aura-number" id="sigma-aura">0</span>
+              <span class="sigma-aura-label">AURA PTS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Bar -->
+      <div class="metrics-bar">
+        <div class="metric-item">
+          <span class="metric-label">Participantes</span>
+          <span class="metric-val" id="metric-users-count">8</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Aura Total en Juego</span>
+          <span class="metric-val" id="metric-total-aura">0</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Juicios de Tribunal</span>
+          <span class="metric-val" id="metric-logs-count">0</span>
+        </div>
+      </div>
+
+      <!-- Leaderboard Header & Sorting Controls -->
+      <div class="leaderboard-header">
+        <h2 class="section-title">
+          <span>Clasificación Oficial</span>
+          <span class="live-indicator"><span class="pulse-circle"></span> EN VIVO</span>
+        </h2>
+        
+        <!-- Botón de Ordenamiento (Mayor a Menor y Viceversa) -->
+        <button id="btn-toggle-sort" class="btn-sort" title="Hacé clic para cambiar el orden del ranking">
+          <span id="sort-indicator-icon">📈</span>
+          <span id="sort-indicator-text">Mayor a Menor</span>
+        </button>
+      </div>
+
+      <!-- Leaderboard List -->
+      <div id="leaderboard-list" class="leaderboard-list">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Sincronizando frecuencias de aura...</p>
+        </div>
+      </div>
+
+      <!-- Floating Action Buttons (FAB Container) -->
+      <div class="fab-bar">
+        <button id="fab-sumar" class="btn-fab btn-fab-sumar" aria-label="Sumar Aura">
+          <span class="fab-icon">📈</span>
+          <span class="fab-text">Sumar Aura</span>
+        </button>
+
+        <button id="fab-restar" class="btn-fab btn-fab-restar" aria-label="Restar Aura">
+          <span class="fab-icon">📉</span>
+          <span class="fab-text">Restar Aura</span>
+        </button>
+
+        <button id="fab-tribunal" class="btn-fab btn-fab-tribunal" aria-label="El Tribunal">
+          <span class="fab-icon">⚖️</span>
+          <span class="fab-text">El Tribunal</span>
+          <span id="fab-tribunal-badge" class="badge-lock">🔒</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- VIEW B: FORMULARIO SUMAR / RESTAR AURA       -->
+    <!-- ============================================ -->
+    <section id="view-action-form" class="spa-view hidden">
+      <div class="form-container">
+        
+        <!-- Form Navigation Header -->
+        <div class="form-header">
+          <button id="btn-back-from-form" class="btn-back" aria-label="Volver al ranking">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            <span>Volver al Ranking</span>
+          </button>
+          <div class="action-type-pill" id="action-type-pill">SUMAR AURA</div>
+        </div>
+
+        <!-- Form Hero Banner -->
+        <div class="form-hero" id="form-hero-banner">
+          <div class="form-hero-icon" id="form-hero-icon">📈</div>
+          <div>
+            <h2 id="form-title" class="form-hero-title">Sumar Aura al Jugador</h2>
+            <p id="form-subtitle" class="form-hero-subtitle">Farmeo constante de aura, chupete mal</p>
+          </div>
+        </div>
+
+        <!-- Main Form -->
+        <form id="aura-form" class="aura-form" novalidate>
+          <input type="hidden" id="form-action-type" value="suma">
+
+          <!-- Target User Field -->
+          <div class="form-group">
+            <label for="form-target" class="form-label">
+              <span>¿A quién se le aplica el Aura?</span>
+              <span class="required">*</span>
+            </label>
+            <div class="select-wrapper">
+              <select id="form-target" name="target" class="form-select" required>
+                <option value="" disabled selected>Seleccioná al participante (Target)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Evaluator Field -->
+          <div class="form-group">
+            <label for="form-evaluator" class="form-label">
+              <span>¿Quién está evaluando? (Vos)</span>
+              <span class="required">*</span>
+            </label>
+            <div class="select-wrapper">
+              <select id="form-evaluator" name="evaluator" class="form-select" required>
+                <option value="" disabled selected>Identificate (Evaluador)</option>
+              </select>
+            </div>
+            <p class="form-tip">⚠️ Explicar con motivos y hechos o se abre QR con las tias</p>
+          </div>
+
+          <!-- Amount Field + Quick Presets -->
+          <div class="form-group">
+            <label for="form-amount" class="form-label">
+              <span>Cantidad de Aura</span>
+              <span class="required">*</span>
+            </label>
+            <div class="amount-input-group">
+              <span class="amount-prefix" id="amount-prefix">+</span>
+              <input type="number" id="form-amount" name="amount" class="form-input amount-input" placeholder="Ej: 500" min="1" max="100000" required>
+              <span class="amount-suffix">PTS</span>
+            </div>
+
+            <!-- Quick Preset Chips -->
+            <div class="preset-chips" id="preset-chips">
+              <button type="button" class="chip" data-amount="100">+100</button>
+              <button type="button" class="chip" data-amount="250">+250</button>
+              <button type="button" class="chip" data-amount="500">+500</button>
+              <button type="button" class="chip" data-amount="1000">+1,000</button>
+              <button type="button" class="chip" data-amount="6700">+6,700 🤫</button>
+            </div>
+          </div>
+
+          <!-- Motivo Field (Explica por qué la decision) -->
+          <div class="form-group">
+            <label for="form-motivo" class="form-label">
+              <span>Explica por qué la decision</span>
+              <span class="required">*</span>
+            </label>
+            <textarea id="form-motivo" name="motivo" class="form-textarea" rows="3" placeholder="Explicar con motivos y hechos o se abre QR con las tias" required maxlength="280"></textarea>
+            <div class="textarea-footer">
+              <div class="quick-memes">
+                <span class="quick-meme-btn" data-meme="Hizo un mewing perfecto 67 67 sixseven 🤫🧏‍♂️">🤫 Mewing 67</span>
+                <span class="quick-meme-btn" data-meme="Dab king absoluto en plena charla 🗿">🗿 Dab King</span>
+                <span class="quick-meme-btn" data-meme="Zyzz pose con rizz nivel GigaChad ⚡">⚡ Zyzz Rizz</span>
+                <span class="quick-meme-btn" data-meme="Se tropezó épicamente en público 📉">📉 Se tropezó</span>
+                <span class="quick-meme-btn" data-meme="Dijo 'Skibidi' sin ninguna ironía 💀">💀 Skibidi</span>
+              </div>
+              <span id="char-count" class="char-count">0/280</span>
+            </div>
+          </div>
+
+          <!-- Submit Button (PRG Pattern protected) -->
+          <div class="form-actions">
+            <button type="submit" id="btn-submit-aura" class="btn btn-primary btn-submit">
+              <span class="btn-text">Confirmar y Registrar Veredicto</span>
+              <span class="btn-loader hidden">
+                <span class="spinner-small"></span> Guardando...
+              </span>
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- VIEW C: EL TRIBUNAL DE APELACIONES ⚖️        -->
+    <!-- ============================================ -->
+    <section id="view-tribunal" class="spa-view hidden">
+      <div class="tribunal-container">
+        
+        <!-- Header Tribunal -->
+        <div class="tribunal-header-card">
+          <div class="tribunal-nav">
+            <button id="btn-back-from-tribunal" class="btn-back">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              <span>Volver al Ranking</span>
+            </button>
+            <span class="tribunal-badge-pill">CORTE SUPREMA DE AURA ⚖️</span>
+          </div>
+
+          <div class="tribunal-hero-text">
+            <h2>El Tribunal de Apelaciones</h2>
+            <p>Donde la injusticia se paga caro. Si un reporte fue injustificado, revertilo: el target recupera su aura y el evaluador recibe la misma penalización por falso testimonio 🗿🔨</p>
+          </div>
+
+          <div class="tribunal-schedule-info">
+            <div class="schedule-icon">⏰</div>
+            <div class="schedule-details">
+              <strong>Horario Reglamentario de Sesiones:</strong>
+              <span>Todos los Viernes de 08:00 a 16:00 hs (Hora Local).</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Warning State when outside Friday 8-16hs -->
+        <div id="tribunal-locked-view" class="tribunal-locked-card hidden">
+          <div class="locked-icon">🗿🔒</div>
+          <h3>El Tribunal está cerrado</h3>
+          <p class="locked-quote">"Solo los viernes de 08:00 a 16:00 hs se abren las cortes del ciclotrón. No interrumpas el sixseven."</p>
+          <div class="countdown-box" id="tribunal-countdown">
+            Calculando próxima apertura...
+          </div>
+        </div>
+
+        <!-- Content when Tribunal is OPEN -->
+        <div id="tribunal-open-content">
+          <!-- Filter Tabs: Semanal vs Mensual -->
+          <div class="tribunal-tabs">
+            <button id="tab-week" class="tab-btn active" data-range="week">
+              <span>📅 Esta Semana</span>
+              <span id="badge-count-week" class="tab-count">0</span>
+            </button>
+            <button id="tab-month" class="tab-btn" data-range="month">
+              <span>🗓️ Todo el Mes</span>
+              <span id="badge-count-month" class="tab-count">0</span>
+            </button>
+          </div>
+
+          <!-- List / Table of Logs -->
+          <div class="tribunal-logs-wrapper">
+            <div id="tribunal-logs-container" class="tribunal-logs-list">
+              <!-- Logs injected by JavaScript -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- App Footer -->
+  <footer class="app-footer">
+    <div class="container footer-content">
+      <p>Torneo Aura Ciclotrón &copy; 2026 • Looksmaxxing Division 🤫🧏‍♂️</p>
+    </div>
+  </footer>
+
+  <!-- Modular Frontend Script -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
