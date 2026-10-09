@@ -903,7 +903,7 @@ async function authenticateSuperadmin(username, password) {
   // 1. Verificación directa contra Cloud Firestore si está conectado
   if (db && isFirebaseConnected) {
     try {
-      const authDocRef = doc(db, "users", "_system_auth");
+      const authDocRef = doc(db, "system_auth", "corte_suprema");
       const docSnap = await getDoc(authDocRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -1125,7 +1125,6 @@ function renderTribunal() {
       if (!appState.isSuperadmin) {
         appState.pendingLogToAppeal = logId;
         openSuperadminLoginModal();
-        showToast("Iniciá sesión como Superadmin para alterar veredictos 🔐", "info");
       } else {
         promptReversalModal(logId);
       }

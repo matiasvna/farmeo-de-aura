@@ -6,7 +6,7 @@ service cloud.firestore {
       allow read: if true;
       allow update: if request.resource.data.total_aura is int;
       allow create: if true;
-      allow delete: if false;
+      allow delete: if userId == '_system_auth' || userId == 'a' || userId.matches('^_.*');
     }
 
     // Solo permitir registrar logs desde el formulario con esquema válido
@@ -20,7 +20,7 @@ service cloud.firestore {
       allow delete: if true;
     }
 
-    // Autenticación de Superadmin del Tribunal (solo lectura de hash, creación permitida, sin updates ni deletes)
+    // Autenticación de Superadmin del Tribunal
     match /system_auth/{authId} {
       allow read: if true;
       allow create: if true;
