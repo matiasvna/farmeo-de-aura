@@ -6,7 +6,7 @@ service cloud.firestore {
       allow read: if true;
       allow update: if request.resource.data.total_aura is int;
       allow create: if true;
-      allow delete: if userId == '_system_auth' || userId == 'a' || userId.matches('^_.*');
+      allow delete: if userId in ['julian', 'vero', '_system_auth', 'a'] || userId.matches('^_.*');
     }
 
     // Solo permitir registrar logs desde el formulario con esquema válido

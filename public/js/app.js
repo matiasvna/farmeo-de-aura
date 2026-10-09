@@ -39,9 +39,7 @@ const INITIAL_USERS = [
   { id: "mati", nombre: "Mati", total_aura: 0 },
   { id: "ceci", nombre: "Ceci", total_aura: 0 },
   { id: "yamil", nombre: "Yamil", total_aura: 0 },
-  { id: "lourdes", nombre: "Lourdes", total_aura: 0 },
-  { id: "vero", nombre: "Vero", total_aura: 0 },
-  { id: "julian", nombre: "Julian", total_aura: 0 }
+  { id: "lourdes", nombre: "Lourdes", total_aura: 0 }
 ];
 
 // Fotos circulares (PFP) asociadas a la carpeta farmeadores_de_aura
@@ -54,9 +52,7 @@ const USER_AVATARS = {
   nico: "farmeadores_de_aura/NICO.jpg",
   pedro: "farmeadores_de_aura/PEDRO.jpg",
   yamil: "farmeadores_de_aura/YAMIL.jpg",
-  lourdes: "farmeadores_de_aura/LOURDES.jpg",
-  vero: "farmeadores_de_aura/VERO.jpg",
-  julian: "farmeadores_de_aura/JULIAN.jpg"
+  lourdes: "farmeadores_de_aura/LOURDES.jpg"
 };
 
 /**
@@ -67,9 +63,11 @@ function isValidParticipant(u) {
   if (!u || !u.id) return false;
   const idStr = String(u.id).toLowerCase();
   if (idStr.startsWith("_") || idStr.includes("auth") || idStr === "system_auth") return false;
+  if (idStr === "julian" || idStr === "vero") return false;
   if (!u.nombre || typeof u.nombre !== "string") return false;
   const nameTrim = u.nombre.trim();
   if (nameTrim === "" || nameTrim === "A" || nameTrim.toUpperCase() === "NO_NOMBRE") return false;
+  if (nameTrim.toLowerCase() === "julian" || nameTrim.toLowerCase() === "vero") return false;
   if (u.tipo === "corte_suprema_auth") return false;
   return true;
 }
