@@ -155,6 +155,14 @@ body {
   padding: 0.75rem 0;
 }
 
+/* En versión móvil: la cabecera no se queda fija al deslizar para dejar la pantalla limpia */
+@media (max-width: 768px) {
+  .app-header {
+    position: relative;
+    top: auto;
+  }
+}
+
 .header-inner {
   display: flex;
   align-items: center;
@@ -585,12 +593,34 @@ body {
   border-color: rgba(205, 127, 50, 0.4);
 }
 
-/* Last Place: NEGATIVE AURA 💀 */
+/* Last Place: NEGATIVE AURA 💀 (Solo si realmente tiene aura negativa) */
 .rank-item.negative-aura-last {
   border-color: var(--border-glow-red);
   background: linear-gradient(90deg, rgba(55, 10, 25, 0.85) 0%, rgba(26, 17, 43, 0.9) 100%);
   box-shadow: 0 4px 22px -2px rgba(255, 51, 102, 0.4);
   animation: negativeGlow 3s infinite alternate;
+}
+
+/* Neutral Zero Aura (Línea de partida igual para todos en 0) */
+.rank-item.rank-item-neutral-zero {
+  border-color: var(--border-subtle) !important;
+  background: var(--bg-card) !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.rank-item.rank-item-neutral-zero .rank-position {
+  color: var(--text-dim) !important;
+}
+
+.rank-item.rank-item-neutral-zero .rank-tier-tag {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+
+.rank-item.rank-item-neutral-zero .rank-score.score-zero {
+  color: var(--text-main);
+  text-shadow: none;
 }
 
 .rank-position {
@@ -1221,6 +1251,82 @@ img[src*="YAMIL.jpg"], img[src*="yamil.jpg"] {
   border: 1px solid rgba(157, 78, 221, 0.4);
 }
 
+/* Tribunal Judge Hero (El Profeta) */
+.tribunal-judge-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.tribunal-judge-portrait-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  width: 140px;
+  height: 190px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.75), 0 0 25px rgba(255, 140, 0, 0.4), 0 0 15px var(--neon-purple-glow);
+  border: 2px solid rgba(255, 200, 55, 0.6);
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+  background: #0d0b14;
+}
+
+.tribunal-judge-portrait-wrapper:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 35px rgba(255, 160, 0, 0.6), 0 0 25px var(--neon-purple-glow);
+  border-color: var(--neon-gold);
+}
+
+.tribunal-judge-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.tribunal-judge-portrait-wrapper:hover .tribunal-judge-img {
+  transform: scale(1.06);
+}
+
+.tribunal-judge-badge-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(10, 8, 18, 0.95) 0%, rgba(10, 8, 18, 0.7) 65%, transparent 100%);
+  padding: 1.5rem 0.4rem 0.4rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.tribunal-judge-badge-overlay span {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--neon-gold);
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+.tribunal-judge-rank-tag {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--neon-gold);
+  letter-spacing: 0.06em;
+  margin-bottom: 0.35rem;
+  display: inline-block;
+  text-shadow: 0 0 10px rgba(255, 200, 55, 0.4);
+}
+
+.tribunal-hero-text {
+  flex: 1;
+}
+
 .tribunal-hero-text h2 {
   font-family: var(--font-display);
   font-size: 1.45rem;
@@ -1234,6 +1340,31 @@ img[src*="YAMIL.jpg"], img[src*="yamil.jpg"] {
   color: var(--text-muted);
   line-height: 1.45;
   margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+  .tribunal-judge-hero {
+    flex-direction: column;
+    text-align: center;
+    gap: 1.25rem;
+  }
+
+  .tribunal-judge-portrait-wrapper {
+    width: 145px;
+    height: 195px;
+    margin: 0 auto;
+  }
+
+  .tribunal-hero-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .tribunal-schedule-info {
+    text-align: left;
+    width: 100%;
+  }
 }
 
 .tribunal-schedule-info {
@@ -2049,12 +2180,12 @@ img[src*="YAMIL.jpg"], img[src*="yamil.jpg"] {
   max-width: 72vw;
   max-height: 72vw;
   border-radius: 50%;
-  padding: 6px;
-  background: linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-cyan) 50%, var(--neon-gold) 100%);
-  box-shadow: 0 0 32px rgba(157, 78, 221, 0.5);
+  padding: 4px;
+  background: linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-gold) 100%);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.95), 0 0 25px rgba(157, 78, 221, 0.4);
   margin-bottom: 1.25rem;
   margin-top: 0.5rem;
-  animation: haloPulse 3s infinite alternate;
+  opacity: 1 !important;
 }
 
 .pfp-lightbox-img {
@@ -2063,7 +2194,32 @@ img[src*="YAMIL.jpg"], img[src*="yamil.jpg"] {
   border-radius: 50%;
   object-fit: cover;
   display: block;
-  border: 4px solid var(--bg-card-solid);
+  opacity: 1 !important;
+  filter: none !important;
+  background-color: #0c0915;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+}
+
+/* Modo Magistrado: Retrato solemne vertical para El Profeta (Nitidez absoluta y sin transparencias) */
+.pfp-lightbox-card.judge-mode .pfp-lightbox-img-wrapper {
+  width: 320px;
+  height: 430px;
+  max-width: 86vw;
+  max-height: 66vh;
+  border-radius: var(--radius-md);
+  padding: 4px;
+  background: linear-gradient(135deg, var(--neon-gold) 0%, #ff5500 50%, var(--neon-purple) 100%);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.95), 0 0 35px rgba(255, 140, 0, 0.6);
+  opacity: 1 !important;
+}
+
+.pfp-lightbox-card.judge-mode .pfp-lightbox-img {
+  border-radius: calc(var(--radius-md) - 4px);
+  object-fit: cover;
+  object-position: center 20%;
+  opacity: 1 !important;
+  filter: none !important;
 }
 
 .pfp-lightbox-img[src*="YAMIL"], .pfp-lightbox-img[src*="yamil"],

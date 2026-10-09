@@ -89,7 +89,14 @@ async function initFirebase() {
       const app = initializeApp(firebaseConfig);
       db = getFirestore(app);
       isFirebaseConnected = true;
-      console.log("⚡ Firebase conectado exitosamente a Firestore.");
+      console.log("⚡ Firebase conectado exitosamente a Firestore:", firebaseConfig.projectId);
+
+      // Limpiar residuos de demo local para que Firestore sea la única fuente de verdad
+      try {
+        localStorage.removeItem("torneo_aura_users");
+        localStorage.removeItem("torneo_aura_logs");
+      } catch (e) {}
+
       await seedInitialUsersIfEmpty();
       subscribeToFirestore();
       return;
@@ -170,6 +177,33 @@ function subscribeToFirestore() {
   }, (error) => {
     console.error("Error escuchando 'aura_logs':", error);
   });
+
+  // 3. Sincronización continua automática en vivo cada 5 segundos (silenciosa y sin cartel de 'actualizando')
+  setInterval(async () => {
+    if (!db || !isFirebaseConnected) return;
+    try {
+      const usersCol = collection(db, "users");
+      const snapshot = await getDocs(usersCol);
+      if (!snapshot.empty) {
+        const freshUsers = [];
+        snapshot.forEach(docSnap => {
+          freshUsers.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        const hasDifferences = freshUsers.some(fu => {
+          const match = appState.users.find(u => u.id === fu.id);
+          return !match || (match.total_aura || 0) !== (fu.total_aura || 0);
+        });
+        if (hasDifferences || freshUsers.length !== appState.users.length) {
+          appState.users = freshUsers;
+          renderLeaderboard();
+          populateSelectDropdowns();
+          updateMetrics();
+        }
+      }
+    } catch (e) {
+      // Silencioso en background
+    }
+  }, 5000);
 }
 
 /**
@@ -258,8 +292,8 @@ function updateTribunalTimeStatus() {
     pill.classList.add("locked");
     pillStatus.textContent = "Tribunal Cerrado 🗿";
 
-    fabTribunal.disabled = true;
-    fabTribunal.title = "El Tribunal está cerrado. Solo viernes de 8 a 16hs 🗿";
+    fabTribunal.disabled = false;
+    fabTribunal.title = "El Tribunal está en receso. Solo viernes de 8 a 16hs 🗿 (Clic para ver al Juez y horario)";
     if (fabBadge) fabBadge.textContent = "🔒";
 
     if (lockedView) lockedView.classList.remove("hidden");
@@ -343,40 +377,65 @@ function renderLeaderboard() {
     return;
   }
 
-  // 1. Encontrar siempre al líder absoluto (Sigma Supremo con mayor Aura)
-  const usersByAuraDesc = [...appState.users].sort((a, b) => b.total_aura - a.total_aura);
-  const absoluteTop1 = usersByAuraDesc[0];
+  // 1. Determinar líderes y estado global de puntos
+  const allZero = appState.users.every(u => (u.total_aura || 0) === 0);
+  const maxAura = Math.max(...appState.users.map(u => u.total_aura || 0));
+  const minAura = Math.min(...appState.users.map(u => u.total_aura || 0));
+  const hasLeader = maxAura > 0;
+
+  const usersByAuraDesc = [...appState.users].sort((a, b) => (b.total_aura || 0) - (a.total_aura || 0));
+  const absoluteTop1 = hasLeader ? usersByAuraDesc[0] : null;
 
   const sigmaNameEl = document.getElementById("sigma-name");
   const sigmaAuraEl = document.getElementById("sigma-aura");
   const sigmaAvatarEl = document.getElementById("sigma-avatar");
+  const sigmaTagEl = document.querySelector(".sigma-tag");
+  const sigmaStatusEl = document.querySelector(".sigma-status");
 
-  if (sigmaNameEl && sigmaAuraEl && absoluteTop1) {
-    sigmaNameEl.textContent = absoluteTop1.nombre;
-    sigmaAuraEl.textContent = absoluteTop1.total_aura > 0 ? `+${absoluteTop1.total_aura.toLocaleString()}` : absoluteTop1.total_aura.toLocaleString();
-    if (sigmaAvatarEl) {
-      sigmaAvatarEl.innerHTML = `
-        ${getAvatarHtml(absoluteTop1.id, absoluteTop1.nombre, 'sigma-pfp-img')}
-        <span class="sigma-crown-badge">👑</span>
-      `;
+  if (sigmaNameEl && sigmaAuraEl) {
+    if (hasLeader && absoluteTop1) {
+      sigmaNameEl.textContent = absoluteTop1.nombre;
+      sigmaAuraEl.textContent = `+${absoluteTop1.total_aura.toLocaleString()}`;
+      if (sigmaTagEl) sigmaTagEl.textContent = "👑 ALPHA / SIGMA SUPREMO #1";
+      if (sigmaStatusEl) sigmaStatusEl.textContent = "🤫🧏‍♂️ MEWING GOD SIXSEVEN";
+      if (sigmaAvatarEl) {
+        sigmaAvatarEl.innerHTML = `
+          ${getAvatarHtml(absoluteTop1.id, absoluteTop1.nombre, 'sigma-pfp-img')}
+          <span class="sigma-crown-badge">👑</span>
+        `;
+      }
+    } else {
+      // TODOS TIENEN 0: No poner a nadie como número 1
+      sigmaNameEl.textContent = "No hay nadie aún 🗿";
+      sigmaAuraEl.textContent = "0";
+      if (sigmaTagEl) sigmaTagEl.textContent = "⚖️ TORNEO EN LÍNEA DE PARTIDA";
+      if (sigmaStatusEl) sigmaStatusEl.textContent = "TODOS ARRANCAN CON 0 AURA";
+      if (sigmaAvatarEl) {
+        sigmaAvatarEl.innerHTML = `<span style="font-size: 2.6rem; display: flex; align-items: center; justify-content: center; height: 100%;">🗿</span>`;
+      }
     }
   }
 
-  // 2. Ordenar según la preferencia del usuario (Mayor a Menor o Menor a Mayor)
+  // 2. Ordenar según la preferencia del usuario
   const displayList = [...appState.users].sort((a, b) => {
-    return appState.sortOrder === 'desc' 
-      ? b.total_aura - a.total_aura 
-      : a.total_aura - b.total_aura;
+    const auraA = a.total_aura || 0;
+    const auraB = b.total_aura || 0;
+    if (auraA === auraB) {
+      return (a.nombre || '').localeCompare(b.nombre || '');
+    }
+    return appState.sortOrder === 'desc' ? auraB - auraA : auraA - auraB;
   });
 
   const lowestAuraUser = usersByAuraDesc[usersByAuraDesc.length - 1];
 
-  // 3. Renderizar items del ranking (todos los 8 participantes se muestran siempre)
+  // 3. Renderizar items del ranking (todos parten del mismo color neutral en 0)
   listContainer.innerHTML = displayList.map((user, index) => {
-    const isAbsoluteTop1 = user.id === absoluteTop1.id;
-    const isLowest = user.id === lowestAuraUser.id && (user.total_aura < 0 || (user.total_aura <= 0 && usersByAuraDesc.length > 1));
+    const userAura = user.total_aura || 0;
+    const isUserZero = userAura === 0;
+    const isAbsoluteTop1 = hasLeader && user.id === absoluteTop1.id;
+    // Únicamente es lowest / cooked si tiene AURA ESTRICTAMENTE NEGATIVA (< 0)
+    const isLowest = minAura < 0 && userAura === minAura;
 
-    // Determinar puesto según orden actual (1 a 8)
     const displayRank = index + 1;
 
     let rankClass = `rank-${displayRank}`;
@@ -384,7 +443,13 @@ function renderLeaderboard() {
     let tierTag = "AURA FARMING";
     let flavorText = "⚡ Dab king del ciclotrón 67 🤫";
 
-    if (isAbsoluteTop1) {
+    if (allZero || isUserZero) {
+      // Partida desde 0: TODOS TIENEN EL MISMO COLOR NEUTRAL, SIN ROJOS NI SKULLS
+      rankClass = "rank-item-neutral-zero";
+      badgeIcon = "🗿";
+      tierTag = "0 AURA";
+      flavorText = "⚡ Listo para farmear aura en el torneo";
+    } else if (isAbsoluteTop1) {
       rankClass += " rank-1";
       badgeIcon = "👑";
       tierTag = "Sigma Supremo";
@@ -409,19 +474,21 @@ function renderLeaderboard() {
 
     // Score styling
     let scoreClass = "score-zero";
-    let scoreText = `${user.total_aura}`;
-    if (user.total_aura > 0) {
+    let scoreText = "0";
+    if (userAura > 0) {
       scoreClass = "score-positive";
-      scoreText = `+${user.total_aura.toLocaleString()}`;
-    } else if (user.total_aura < 0) {
+      scoreText = `+${userAura.toLocaleString()}`;
+    } else if (userAura < 0) {
       scoreClass = "score-negative";
-      scoreText = user.total_aura.toLocaleString();
+      scoreText = userAura.toLocaleString();
     }
+
+    const posDisplay = allZero ? `#${displayRank}` : (isAbsoluteTop1 ? '👑 #1' : (isLowest ? `💀 #${displayRank}` : `#${displayRank}`));
 
     return `
       <div class="rank-item ${rankClass}" data-user-id="${user.id}" title="Hacé clic para ver el historial de ${escapeHTML(user.nombre)}">
         <div class="rank-position">
-          ${isAbsoluteTop1 ? '👑 #1' : (isLowest ? `💀 #${displayRank}` : `#${displayRank}`)}
+          ${posDisplay}
         </div>
         <div class="rank-avatar">
           ${getAvatarHtml(user.id, user.nombre)}
@@ -612,8 +679,10 @@ function openActionForm(actionType) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+let isSubmittingAura = false;
 async function handleAuraFormSubmit(e) {
   e.preventDefault();
+  if (isSubmittingAura) return;
   const submitBtn = document.getElementById("btn-submit-aura");
   const btnText = submitBtn.querySelector(".btn-text");
   const btnLoader = submitBtn.querySelector(".btn-loader");
@@ -721,13 +790,17 @@ async function handleAuraFormSubmit(e) {
     const signText = actionType === "suma" ? `+${amountVal}` : `-${amountVal}`;
     showToast(`${emojiAction} ${signText} Aura para ${targetName} registrado 🤫🧏‍♂️`, "success");
 
-    // Redirección PRG
+    // Redirección PRG y limpieza de estado de historial
+    try {
+      window.history.replaceState({ view: 'ranking' }, '', window.location.pathname);
+    } catch (e) {}
     returnToRanking();
 
   } catch (err) {
     console.error("Error al registrar Aura:", err);
     showToast("Ocurrió un error al guardar. Reintentá en un instante.", "error");
   } finally {
+    isSubmittingAura = false;
     submitBtn.disabled = false;
     btnText.classList.remove("hidden");
     btnLoader.classList.add("hidden");
@@ -740,8 +813,7 @@ async function handleAuraFormSubmit(e) {
 function openTribunalView() {
   const isOpen = isTribunalOpen();
   if (!isOpen && !devTribunalBypass) {
-    showToast("El Tribunal está cerrado. Solo viernes de 8 a 16hs 🗿", "error");
-    return;
+    showToast("El Tribunal está en receso. Sesiones los viernes de 8 a 16hs 🗿", "info");
   }
 
   const formSection = document.getElementById("view-action-form");
@@ -1150,23 +1222,48 @@ function openPfpModal(userId, userName, userAura) {
   const auraEl = document.getElementById("pfp-lightbox-aura");
 
   const normId = (userId || '').toLowerCase();
-  const imgSrc = USER_AVATARS[normId] || `farmeadores_de_aura/${normId.toUpperCase()}.jpg`;
+  let imgSrc;
+  if (normId === 'profeta' || normId === 'profesota') {
+    imgSrc = 'farmeadores_de_aura/img/el_profeta.jpeg';
+  } else {
+    imgSrc = USER_AVATARS[normId] || `farmeadores_de_aura/${normId.toUpperCase()}.jpg`;
+  }
 
   imgEl.src = imgSrc;
+  imgEl.onerror = () => {
+    if (imgSrc.includes('el_profeta.jpeg')) {
+      imgEl.src = 'farmeadores_de_aura/img/el_profesota.jpg';
+    }
+  };
   imgEl.alt = userName;
   nameEl.textContent = userName;
 
-  const auraScore = typeof userAura === 'number' ? userAura : 0;
-  const auraSign = auraScore > 0 ? `+${auraScore.toLocaleString()}` : auraScore.toLocaleString();
-  auraEl.textContent = `${auraSign} Aura`;
-  auraEl.style.color = auraScore > 0 ? 'var(--neon-green)' : (auraScore < 0 ? 'var(--neon-red)' : 'var(--text-muted)');
+  if (typeof userAura === 'number') {
+    const auraSign = userAura > 0 ? `+${userAura.toLocaleString()}` : userAura.toLocaleString();
+    auraEl.textContent = `${auraSign} Aura`;
+    auraEl.style.color = userAura > 0 ? 'var(--neon-green)' : (userAura < 0 ? 'var(--neon-red)' : 'var(--text-muted)');
+  } else {
+    auraEl.textContent = userAura || 'Magistrado Supremo ⚖️';
+    auraEl.style.color = 'var(--neon-gold)';
+  }
+
+  const cardEl = modal.querySelector(".pfp-lightbox-card");
+  if (normId === 'profesota' || normId === 'profeta') {
+    cardEl?.classList.add("judge-mode");
+  } else {
+    cardEl?.classList.remove("judge-mode");
+  }
 
   modal.classList.remove("hidden");
 }
 
 function closePfpModal() {
   const modal = document.getElementById("pfp-modal");
-  if (modal) modal.classList.add("hidden");
+  if (modal) {
+    modal.classList.add("hidden");
+    const cardEl = modal.querySelector(".pfp-lightbox-card");
+    cardEl?.classList.remove("judge-mode");
+  }
 }
 
 function showToast(message, type = "info") {
@@ -1248,10 +1345,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const sortToggleBtn = document.getElementById("btn-toggle-sort");
   sortToggleBtn?.addEventListener("click", toggleSortOrder);
 
-  // Botones de navegación principal (FABs)
+  // Botones de navegación principal (FABs) y Header
   document.getElementById("fab-sumar")?.addEventListener("click", () => openActionForm("suma"));
   document.getElementById("fab-restar")?.addEventListener("click", () => openActionForm("resta"));
   document.getElementById("fab-tribunal")?.addEventListener("click", openTribunalView);
+  document.getElementById("tribunal-pill")?.addEventListener("click", openTribunalView);
 
   // Botones de regreso al ranking
   document.getElementById("btn-back-from-form")?.addEventListener("click", returnToRanking);
@@ -1320,6 +1418,14 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("pfp-modal")?.addEventListener("click", (e) => {
     if (e.target.id === "pfp-modal") closePfpModal();
   });
+
+  // Retrato del Tribunal: El Profeta para ampliar en Lightbox
+  const judgePortrait = document.getElementById("tribunal-judge-portrait");
+  if (judgePortrait) {
+    judgePortrait.addEventListener("click", () => {
+      openPfpModal("profeta", "El Profeta ⚖️", "Magistrado Supremo");
+    });
+  }
 
   // Cerrar cualquier modal con tecla Escape
   document.addEventListener("keydown", (e) => {

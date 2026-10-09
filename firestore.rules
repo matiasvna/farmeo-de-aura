@@ -1,35 +1,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Reglas para la colección 'users'
+    // Solo permitir modificar usuarios con valores enteros de total_aura
     match /users/{userId} {
-      // Permitir lectura a todos (para el ranking en tiempo real)
       allow read: if true;
-      
-      // Permitir creación y actualización de puntos de aura
-      allow create, update: if true;
-      
-      // Bloquear eliminación de participantes
+      allow update: if request.resource.data.total_aura is int;
+      allow create: if true;
       allow delete: if false;
     }
 
-    // Reglas para la colección 'aura_logs'
+    // Solo permitir registrar logs desde el formulario con esquema válido
     match /aura_logs/{logId} {
-      // Permitir lectura a todos (para historial y tribunal)
       allow read: if true;
-      
-      // Permitir registrar nuevos eventos de suma/resta
-      allow create: if request.resource.data.cantidad is number
+      allow create: if request.resource.data.cantidad is int
                     && request.resource.data.tipo in ['suma', 'resta']
-                    && request.resource.data.target_user is string
-                    && request.resource.data.evaluator is string;
-      
-      // Permitir actualizar para el veredicto de apelación del Tribunal
+                    && request.resource.data.target_id is string
+                    && request.resource.data.evaluator_id is string;
       allow update: if request.resource.data.revisado is bool;
-      
-      // Prohibir borrar registros del historial
-      allow delete: if false;
+      allow delete: if true;
     }
   }
 }
