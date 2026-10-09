@@ -15,6 +15,9 @@ Todos comienzan con **0 Aura**:
 - **Mati**
 - **Ceci**
 - **Yamil**
+- **Lourdes**
+- **Vero**
+- **Julian**
 
 ---
 

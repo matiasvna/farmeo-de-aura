@@ -38,7 +38,10 @@ const INITIAL_USERS = [
   { id: "pedro", nombre: "Pedro", total_aura: 0 },
   { id: "mati", nombre: "Mati", total_aura: 0 },
   { id: "ceci", nombre: "Ceci", total_aura: 0 },
-  { id: "yamil", nombre: "Yamil", total_aura: 0 }
+  { id: "yamil", nombre: "Yamil", total_aura: 0 },
+  { id: "lourdes", nombre: "Lourdes", total_aura: 0 },
+  { id: "vero", nombre: "Vero", total_aura: 0 },
+  { id: "julian", nombre: "Julian", total_aura: 0 }
 ];
 
 // Fotos circulares (PFP) asociadas a la carpeta farmeadores_de_aura
@@ -50,8 +53,26 @@ const USER_AVATARS = {
   mati: "farmeadores_de_aura/MATI.jpg",
   nico: "farmeadores_de_aura/NICO.jpg",
   pedro: "farmeadores_de_aura/PEDRO.jpg",
-  yamil: "farmeadores_de_aura/YAMIL.jpg"
+  yamil: "farmeadores_de_aura/YAMIL.jpg",
+  lourdes: "farmeadores_de_aura/LOURDES.jpg",
+  vero: "farmeadores_de_aura/VERO.jpg",
+  julian: "farmeadores_de_aura/JULIAN.jpg"
 };
+
+/**
+ * Validador estricto para filtrar participantes reales del torneo.
+ * Bloquea documentos del sistema, identificadores especiales o registros residuales ("A").
+ */
+function isValidParticipant(u) {
+  if (!u || !u.id) return false;
+  const idStr = String(u.id).toLowerCase();
+  if (idStr.startsWith("_") || idStr.includes("auth") || idStr === "system_auth") return false;
+  if (!u.nombre || typeof u.nombre !== "string") return false;
+  const nameTrim = u.nombre.trim();
+  if (nameTrim === "" || nameTrim === "A" || nameTrim.toUpperCase() === "NO_NOMBRE") return false;
+  if (u.tipo === "corte_suprema_auth") return false;
+  return true;
+}
 
 function getAvatarHtml(userId, userName, extraClass = '') {
   const normId = (userId || '').toLowerCase();
@@ -130,16 +151,21 @@ async function initFirebase() {
 }
 
 /**
- * Seeding inicial en Firestore si la colección 'users' está vacía
+ * Seeding inicial en Firestore si algún participante de INITIAL_USERS falta en Firestore
  */
 async function seedInitialUsersIfEmpty() {
   if (!db) return;
   try {
     const usersCol = collection(db, "users");
     const snapshot = await getDocs(usersCol);
-    if (snapshot.empty) {
-      console.log("🌱 Inicializando participantes en Firestore...");
-      for (const u of INITIAL_USERS) {
+    const existingIds = new Set();
+    snapshot.forEach(docSnap => {
+      existingIds.add(docSnap.id);
+    });
+
+    for (const u of INITIAL_USERS) {
+      if (!existingIds.has(u.id)) {
+        console.log(`🌱 Sembrando nuevo participante: ${u.nombre}`);
         await setDoc(doc(db, "users", u.id), {
           id: u.id,
           nombre: u.nombre,
@@ -147,7 +173,6 @@ async function seedInitialUsersIfEmpty() {
           created_at: serverTimestamp()
         });
       }
-      showToast("Participantes inicializados con 0 de Aura 🗿", "info");
     }
   } catch (e) {
     console.error("Error al sembrar usuarios en Firestore:", e);
@@ -165,8 +190,10 @@ function subscribeToFirestore() {
   onSnapshot(usersQuery, (snapshot) => {
     const users = [];
     snapshot.forEach(docSnap => {
-      if (docSnap.id.startsWith("_")) return; // Excluir documentos de sistema como _system_auth
-      users.push({ id: docSnap.id, ...docSnap.data() });
+      const uData = { id: docSnap.id, ...docSnap.data() };
+      if (isValidParticipant(uData)) {
+        users.push(uData);
+      }
     });
     appState.users = users;
     renderLeaderboard();
@@ -206,8 +233,10 @@ function subscribeToFirestore() {
       if (!snapshot.empty) {
         const freshUsers = [];
         snapshot.forEach(docSnap => {
-          if (docSnap.id.startsWith("_")) return;
-          freshUsers.push({ id: docSnap.id, ...docSnap.data() });
+          const uData = { id: docSnap.id, ...docSnap.data() };
+          if (isValidParticipant(uData)) {
+            freshUsers.push(uData);
+          }
         });
         const hasDifferences = freshUsers.some(fu => {
           const match = appState.users.find(u => u.id === fu.id);
@@ -235,7 +264,9 @@ function initLocalStorageFallback() {
 
   if (storedUsers) {
     try {
-      appState.users = JSON.parse(storedUsers);
+      const parsed = JSON.parse(storedUsers);
+      appState.users = parsed.filter(isValidParticipant);
+      if (appState.users.length === 0) appState.users = [...INITIAL_USERS];
     } catch {
       appState.users = [...INITIAL_USERS];
     }
@@ -261,7 +292,8 @@ function initLocalStorageFallback() {
 }
 
 function saveLocalState() {
-  localStorage.setItem("torneo_aura_users", JSON.stringify(appState.users));
+  const cleanUsers = (appState.users || []).filter(isValidParticipant);
+  localStorage.setItem("torneo_aura_users", JSON.stringify(cleanUsers));
   localStorage.setItem("torneo_aura_logs", JSON.stringify(appState.logs));
 }
 
@@ -299,7 +331,7 @@ function updateTribunalTimeStatus() {
   if (isOpen) {
     pill.classList.remove("locked");
     pill.classList.add("open");
-    pillStatus.textContent = devTribunalBypass ? "Tribunal Abierto (Dev) ⚖️" : "Tribunal Abierto ⚖️";
+    pillStatus.textContent = "Tribunal Abierto ⚖️";
     
     fabTribunal.disabled = false;
     fabTribunal.title = "El Tribunal de Apelaciones está activo";
@@ -387,6 +419,8 @@ function updateSortButtonUI() {
 function renderLeaderboard() {
   const listContainer = document.getElementById("leaderboard-list");
   if (!listContainer) return;
+
+  appState.users = (appState.users || []).filter(isValidParticipant);
 
   if (appState.users.length === 0) {
     listContainer.innerHTML = `
