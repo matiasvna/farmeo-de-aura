@@ -19,5 +19,12 @@ service cloud.firestore {
       allow update: if request.resource.data.revisado is bool;
       allow delete: if true;
     }
+
+    // Autenticación de Superadmin del Tribunal (solo lectura de hash, creación permitida, sin updates ni deletes)
+    match /system_auth/{authId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
   }
 }

@@ -2294,3 +2294,195 @@ img[src*="YAMIL.jpg"], img[src*="yamil.jpg"] {
     font-size: 0.92rem;
   }
 }
+
+/* ==========================================================================
+   SUPERADMIN TRIBUNAL AUTHENTICATION & MODAL STYLES
+   ========================================================================== */
+.tribunal-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.superadmin-auth-widget {
+  display: flex;
+  align-items: center;
+}
+
+.btn-superadmin-login {
+  background: rgba(157, 78, 221, 0.15);
+  border: 1px solid rgba(157, 78, 221, 0.45);
+  color: #d8b4fe;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(8px);
+}
+
+.btn-superadmin-login:hover {
+  background: rgba(157, 78, 221, 0.3);
+  border-color: var(--neon-purple);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 16px var(--neon-purple-glow);
+}
+
+.superadmin-logged-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 200, 55, 0.12);
+  border: 1px solid rgba(255, 200, 55, 0.4);
+  padding: 0.3rem 0.65rem 0.3rem 0.85rem;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 14px rgba(255, 200, 55, 0.2);
+}
+
+.superadmin-tag {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--neon-gold);
+  letter-spacing: 0.02em;
+}
+
+.btn-superadmin-logout {
+  background: rgba(255, 51, 102, 0.15);
+  border: 1px solid rgba(255, 51, 102, 0.3);
+  color: #ff99b3;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-superadmin-logout:hover {
+  background: var(--neon-red);
+  color: #fff;
+  border-color: var(--neon-red);
+}
+
+/* Modal Card Auth */
+.modal-card-auth {
+  max-width: 440px;
+  border-color: rgba(157, 78, 221, 0.4);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(157, 78, 221, 0.25);
+}
+
+.auth-header-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.auth-modal-icon {
+  font-size: 1.8rem;
+  background: rgba(255, 200, 55, 0.12);
+  border: 1px solid rgba(255, 200, 55, 0.3);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+.auth-modal-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.auth-modal-form {
+  margin-top: 0.5rem;
+}
+
+.auth-form-body {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-error-msg {
+  background: rgba(255, 51, 102, 0.15);
+  border: 1px solid rgba(255, 51, 102, 0.4);
+  color: #ff809b;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  animation: shakeAlert 0.3s ease;
+}
+
+@keyframes shakeAlert {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.btn-submit-auth {
+  background: linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-purple-deep) 100%);
+}
+
+.btn-submit-auth:hover {
+  box-shadow: 0 0 25px var(--neon-purple-glow);
+}
+
+/* Modal Card Success (PRG Pop-up de confirmación) */
+.modal-card-success {
+  max-width: 460px;
+  padding: 2.25rem 1.75rem;
+  border-color: rgba(0, 255, 135, 0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 40px rgba(0, 255, 135, 0.25);
+  animation: pfpZoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-success-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 0 15px rgba(255, 200, 55, 0.5));
+}
+
+.modal-card-success h3 {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 0.75rem;
+}
+
+.modal-success-desc {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 1.75rem;
+}
+
+.justify-center {
+  justify-content: center !important;
+}
+
+/* Appeal buttons state in Tribunal logs */
+.btn-appeal.appeal-locked {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #c4b5fd;
+}
+
+.btn-appeal.appeal-locked:hover {
+  background: rgba(157, 78, 221, 0.2);
+  border-color: var(--neon-purple);
+  color: #fff;
+}
+

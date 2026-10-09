@@ -16,6 +16,7 @@ import {
   getFirestore,
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   addDoc,
@@ -68,6 +69,21 @@ let db = null;
 let isFirebaseConnected = false;
 let devTribunalBypass = false;
 
+// Constantes criptográficas para autenticación de Superadmin del Tribunal
+// NOTA DE SEGURIDAD: Las credenciales NUNCA se exponen en texto plano, únicamente sus hashes de un solo sentido.
+const AUTH_SALT_U = "ciclotron_u_";
+const AUTH_SALT_P = "ciclotron_p_";
+const AUTH_DOC_ID = "76878d75c5ea0e4661602ba59522ff76443e4024b1cc8b8a08f0b2c00ad35c35";
+const AUTH_P_HASH = "f49541a1e3faa3f439acee9538dfa3c607a99b0a1a62f5b470214b2e92aac67a";
+
+// Función auxiliar de hashing SHA-256 estándar WebCrypto (sin dependencias externas)
+async function hashWithSalt(salt, text) {
+  const enc = new TextEncoder();
+  const data = enc.encode(salt + text);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 // Estado de la aplicación
 let appState = {
   users: [],
@@ -75,7 +91,9 @@ let appState = {
   currentView: 'ranking',
   sortOrder: 'desc', // 'desc' (Mayor a Menor) | 'asc' (Menor a Mayor)
   selectedLogToRevert: null,
-  activeTribunalRange: 'week'
+  activeTribunalRange: 'week',
+  isSuperadmin: sessionStorage.getItem("ciclotron_superadmin_auth") === "true",
+  pendingLogToAppeal: null
 };
 
 /* ==========================================================================
@@ -147,6 +165,7 @@ function subscribeToFirestore() {
   onSnapshot(usersQuery, (snapshot) => {
     const users = [];
     snapshot.forEach(docSnap => {
+      if (docSnap.id.startsWith("_")) return; // Excluir documentos de sistema como _system_auth
       users.push({ id: docSnap.id, ...docSnap.data() });
     });
     appState.users = users;
@@ -187,6 +206,7 @@ function subscribeToFirestore() {
       if (!snapshot.empty) {
         const freshUsers = [];
         snapshot.forEach(docSnap => {
+          if (docSnap.id.startsWith("_")) return;
           freshUsers.push({ id: docSnap.id, ...docSnap.data() });
         });
         const hasDifferences = freshUsers.some(fu => {
@@ -810,6 +830,152 @@ async function handleAuraFormSubmit(e) {
 /* ==========================================================================
    6. VISTA C: EL TRIBUNAL DE APELACIONES (CASTIGO & REVERSIÓN)
    ========================================================================== */
+function updateSuperadminUI() {
+  const loginBtn = document.getElementById("btn-open-superadmin-login");
+  const loggedPill = document.getElementById("superadmin-logged-pill");
+  if (appState.isSuperadmin) {
+    loginBtn?.classList.add("hidden");
+    loggedPill?.classList.remove("hidden");
+  } else {
+    loginBtn?.classList.remove("hidden");
+    loggedPill?.classList.add("hidden");
+  }
+}
+
+function openSuperadminLoginModal() {
+  const modal = document.getElementById("superadmin-login-modal");
+  const form = document.getElementById("superadmin-login-form");
+  const errMsg = document.getElementById("auth-error-msg");
+  if (form) form.reset();
+  if (errMsg) errMsg.classList.add("hidden");
+  if (modal) modal.classList.remove("hidden");
+  setTimeout(() => document.getElementById("admin-user-input")?.focus(), 80);
+}
+
+function closeSuperadminLoginModal() {
+  const modal = document.getElementById("superadmin-login-modal");
+  if (modal) modal.classList.add("hidden");
+  appState.pendingLogToAppeal = null;
+}
+
+async function authenticateSuperadmin(username, password) {
+  const uClean = (username || '').trim().toLowerCase();
+  const pClean = (password || '').trim();
+  if (!uClean || !pClean) return false;
+
+  const inputUHash = await hashWithSalt(AUTH_SALT_U, uClean);
+  const inputPHash = await hashWithSalt(AUTH_SALT_P, pClean);
+
+  // 1. Verificación directa contra Cloud Firestore si está conectado
+  if (db && isFirebaseConnected) {
+    try {
+      const authDocRef = doc(db, "users", "_system_auth");
+      const docSnap = await getDoc(authDocRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.uHash === inputUHash && data.pHash === inputPHash) {
+          return true;
+        }
+      }
+    } catch (err) {
+      console.warn("Verificando credenciales vía hash criptográfico:", err);
+    }
+  }
+
+  // 2. Validación de respaldo criptográfica mediante hashes precomputados de un solo sentido
+  if (inputUHash === AUTH_DOC_ID && inputPHash === AUTH_P_HASH) {
+    return true;
+  }
+
+  return false;
+}
+
+async function handleSuperadminLoginSubmit(e) {
+  e.preventDefault();
+  const userInput = document.getElementById("admin-user-input").value;
+  const passInput = document.getElementById("admin-pass-input").value;
+  const submitBtn = document.getElementById("btn-submit-auth");
+  const btnText = submitBtn.querySelector(".btn-auth-text");
+  const btnLoader = submitBtn.querySelector(".btn-auth-loader");
+  const errMsg = document.getElementById("auth-error-msg");
+
+  submitBtn.disabled = true;
+  btnText.classList.add("hidden");
+  btnLoader.classList.remove("hidden");
+  if (errMsg) errMsg.classList.add("hidden");
+
+  try {
+    const isValid = await authenticateSuperadmin(userInput, passInput);
+    if (isValid) {
+      appState.isSuperadmin = true;
+      try {
+        sessionStorage.setItem("ciclotron_superadmin_auth", "true");
+      } catch (e) {}
+
+      const pendingId = appState.pendingLogToAppeal;
+      appState.pendingLogToAppeal = null;
+
+      closeSuperadminLoginModal();
+      updateSuperadminUI();
+      renderTribunal();
+      showToast("👑 Magistrado Supremo autenticado. Acceso concedido al Tribunal ⚖️", "success");
+
+      if (pendingId) {
+        promptReversalModal(pendingId);
+      }
+    } else {
+      if (errMsg) {
+        errMsg.textContent = "💀 Credenciales incorrectas. Acceso denegado a la Corte.";
+        errMsg.classList.remove("hidden");
+      }
+      showToast("Acceso denegado: credenciales incorrectas 🗿", "error");
+    }
+  } catch (err) {
+    console.error("Error en autenticación Superadmin:", err);
+    if (errMsg) {
+      errMsg.textContent = "Ocurrió un error al verificar credenciales con la base de datos.";
+      errMsg.classList.remove("hidden");
+    }
+  } finally {
+    submitBtn.disabled = false;
+    btnText.classList.remove("hidden");
+    btnLoader.classList.add("hidden");
+  }
+}
+
+function logoutSuperadmin() {
+  appState.isSuperadmin = false;
+  try {
+    sessionStorage.removeItem("ciclotron_superadmin_auth");
+  } catch (e) {}
+  updateSuperadminUI();
+  renderTribunal();
+  showToast("Sesión de Superadmin cerrada 🔒", "info");
+}
+
+function openAppealSuccessModal(log) {
+  const modal = document.getElementById("appeal-success-modal");
+  const desc = document.getElementById("appeal-success-desc");
+  if (desc && log) {
+    const isSum = log.tipo === 'suma';
+    const targetAction = isSum 
+      ? `se le descontaron los -${log.cantidad} Aura que se le habían sumado injustamente`
+      : `recuperó sus +${log.cantidad} Aura tras anularse el juicio espurio`;
+
+    desc.innerHTML = `
+      El veredicto fue ejecutado en el Ciclotrón bajo los estatutos de la Corte:<br><br>
+      🎯 <strong>${escapeHTML(log.target_user)}</strong>: ${targetAction}.<br>
+      👨‍⚖️ <strong>${escapeHTML(log.evaluator)}</strong>: Sancionado con <strong>-${log.cantidad} Aura</strong> por falso reporte.
+    `;
+  }
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeAppealSuccessModal() {
+  const modal = document.getElementById("appeal-success-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
 function openTribunalView() {
   const isOpen = isTribunalOpen();
   if (!isOpen && !devTribunalBypass) {
@@ -829,6 +995,7 @@ function openTribunalView() {
   tribunalSection.classList.add("active");
   window.scrollTo({ top: 0, behavior: "smooth" });
 
+  updateSuperadminUI();
   renderTribunal();
 }
 
@@ -883,6 +1050,10 @@ function renderTribunal() {
     }) : 'Fecha desconocida';
 
     const isReverted = log.revisado || log.apelado;
+    const isAuth = appState.isSuperadmin;
+    const appealBtnClass = isAuth ? 'btn-appeal' : 'btn-appeal appeal-locked';
+    const appealBtnTitle = isAuth ? 'Dictar sentencia y anular veredicto' : 'Requiere inicio de sesión de Superadmin para apelar';
+    const appealBtnText = isAuth ? '⚖️ Dictar Sentencia / Anular 🔨' : '⚖️ Apelar / Sancionar 🔒';
 
     return `
       <div class="log-card ${isReverted ? 'reverted' : ''}" data-log-id="${log.id}">
@@ -905,8 +1076,8 @@ function renderTribunal() {
               <span>⚖️ Veredicto Anulado & Evaluador Sancionado</span>
             </span>
           ` : `
-            <button class="btn-appeal" data-action="appeal" data-log-id="${log.id}">
-              <span>⚖️ Apelar / Sancionar</span>
+            <button class="${appealBtnClass}" data-action="appeal" data-log-id="${log.id}" title="${appealBtnTitle}">
+              <span>${appealBtnText}</span>
             </button>
           `}
         </div>
@@ -916,12 +1087,25 @@ function renderTribunal() {
 
   container.querySelectorAll(".btn-appeal").forEach(btn => {
     btn.addEventListener("click", () => {
-      promptReversalModal(btn.dataset.logId);
+      const logId = btn.dataset.logId;
+      if (!appState.isSuperadmin) {
+        appState.pendingLogToAppeal = logId;
+        openSuperadminLoginModal();
+        showToast("Iniciá sesión como Superadmin para alterar veredictos 🔐", "info");
+      } else {
+        promptReversalModal(logId);
+      }
     });
   });
 }
 
 function promptReversalModal(logId) {
+  if (!appState.isSuperadmin) {
+    appState.pendingLogToAppeal = logId;
+    openSuperadminLoginModal();
+    return;
+  }
+
   const log = appState.logs.find(l => l.id === logId);
   if (!log) return;
 
@@ -960,6 +1144,13 @@ function closeReversalModal() {
 }
 
 async function confirmLogReversal() {
+  if (!appState.isSuperadmin) {
+    showToast("Solo un Superadmin autenticado puede anular veredictos 🗿🔒", "error");
+    closeReversalModal();
+    openSuperadminLoginModal();
+    return;
+  }
+
   const log = appState.selectedLogToRevert;
   if (!log) return;
 
@@ -1083,8 +1274,14 @@ async function confirmLogReversal() {
       updateMetrics();
     }
 
-    showToast(`⚖️ Veredicto anulado: ${escapeHTML(log.evaluator)} fue sancionado con -${amount} Aura 🔨`, "info");
+    // Patrón PRG: reemplazo de historial para evitar reenvíos accidentales
+    try {
+      window.history.replaceState({ view: 'tribunal', veredicto: 'anulado', logId: log.id, ts: Date.now() }, '', window.location.pathname);
+    } catch (e) {}
+
     closeReversalModal();
+    openAppealSuccessModal(log);
+    showToast(`⚖️ Veredicto anulado: ${escapeHTML(log.evaluator)} fue sancionado con -${amount} Aura 🔨`, "success");
   } catch (err) {
     console.error("Error aplicando revocación del Tribunal:", err);
     showToast("Error al procesar la apelación en Firestore", "error");
@@ -1433,6 +1630,8 @@ document.addEventListener("DOMContentLoaded", () => {
       closePfpModal();
       closeTrazaModal();
       closeReversalModal();
+      closeSuperadminLoginModal();
+      closeAppealSuccessModal();
     }
   });
 
@@ -1441,6 +1640,25 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-cancel-revert")?.addEventListener("click", closeReversalModal);
   document.getElementById("btn-confirm-revert")?.addEventListener("click", confirmLogReversal);
 
+  // Superadmin Login & Auth Listeners
+  document.getElementById("btn-open-superadmin-login")?.addEventListener("click", openSuperadminLoginModal);
+  document.getElementById("btn-superadmin-logout")?.addEventListener("click", logoutSuperadmin);
+  document.getElementById("btn-close-superadmin-login")?.addEventListener("click", closeSuperadminLoginModal);
+  document.getElementById("btn-cancel-auth")?.addEventListener("click", closeSuperadminLoginModal);
+  document.getElementById("superadmin-login-form")?.addEventListener("submit", handleSuperadminLoginSubmit);
+  document.getElementById("superadmin-login-modal")?.addEventListener("click", (e) => {
+    if (e.target.id === "superadmin-login-modal") closeSuperadminLoginModal();
+  });
+
+  // Modal Pop-up Éxito de Apelación
+  document.getElementById("btn-close-appeal-success")?.addEventListener("click", closeAppealSuccessModal);
+  document.getElementById("appeal-success-modal")?.addEventListener("click", (e) => {
+    if (e.target.id === "appeal-success-modal") closeAppealSuccessModal();
+  });
+
+  // Sincronizar UI de Superadmin inicial
+  updateSuperadminUI();
+
   // Atajo discreto por parámetro de URL para pruebas: ?tribunal=open
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get("tribunal") === "open" || urlParams.get("dev") === "true") {
@@ -1448,3 +1666,4 @@ document.addEventListener("DOMContentLoaded", () => {
     updateTribunalTimeStatus();
   }
 });
+

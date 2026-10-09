@@ -1,7 +1,7 @@
-# 🗿 FARMEO DE AURA | Torneo Ciclotrón
-### Torneo de aura LOOKMAXING ZYZZ RIZZ GIGACHAD SIXSEVEN 🤫🧏‍♂️
+# 🔥 TORNEO DE AURA CICLOTRÓN 🗿⚡
+### Farmeo constante de aura, ranking en tiempo real y Tribunal de Apelaciones 🤫🧏‍♂️
 
-Aplicación web Single Page Application (SPA) para la gestión y auditoría en tiempo real del Aura de los participantes del torneo, con estética Dark Mode Neón inspirada en la cultura de internet, ranking interactivo y Tribunal de Apelaciones de los viernes.
+Torneo oficial de aura LOOKMAXING ZYZZ RIZZ GIGACHAD SIXSEVEN. Ranking en tiempo real, suma/resta de aura, traza de auditoría y Corte Suprema de Apelaciones con acceso de Magistrado Superadmin.
 
 ---
 

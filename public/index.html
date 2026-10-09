@@ -4,8 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0d0b14">
-  <meta name="description" content="Gestión y Farmeo de Aura - Torneo de aura LOOKMAXING ZYZZ RIZZ GIGACHAD SIXSEVEN. Ranking en tiempo real, suma/resta de aura y Tribunal de Apelaciones.">
-  <title>🔥🔥 TORNEO DE AURA 🗿</title>
+  <meta name="description" content="🔥 TORNEO DE AURA CICLOTRÓN 🗿⚡ Farmeo constante de aura, ranking en vivo y Tribunal de Apelaciones. 🤫🧏‍♂️">
+  <title>🔥 TORNEO DE AURA CICLOTRÓN 🗿⚡</title>
+
+  <!-- Social & Link Sharing Metadata (WhatsApp, Telegram, Discord, etc.) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="🔥 TORNEO DE AURA CICLOTRÓN 🗿⚡">
+  <meta property="og:description" content="Farmeo constante de aura, ranking en tiempo real y Tribunal de Apelaciones del Ciclotrón. 🤫🧏‍♂️">
+  <meta property="og:site_name" content="TORNEO DE AURA CICLOTRÓN 🔥🗿⚡">
+  <meta property="og:image" content="farmeadores_de_aura/img/el_profeta.jpeg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="🔥 TORNEO DE AURA CICLOTRÓN 🗿⚡">
+  <meta name="twitter:description" content="Farmeo constante de aura, ranking en tiempo real y Tribunal de Apelaciones del Ciclotrón. 🤫🧏‍♂️">
+  <meta name="twitter:image" content="farmeadores_de_aura/img/el_profeta.jpeg">
 
   <!-- Google Fonts: Space Grotesk & Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,6 +33,56 @@
 
   <!-- Notification Toast Container -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Modal Login Superadmin Tribunal (Corte Suprema) -->
+  <div id="superadmin-login-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="superadmin-login-title">
+    <div class="modal-card modal-card-auth">
+      <div class="modal-header">
+        <div class="auth-header-title-wrap">
+          <span class="auth-modal-icon">⚖️</span>
+          <div>
+            <h3 id="superadmin-login-title">Acceso Magistrado Supremo</h3>
+            <p class="auth-modal-sub">Autenticación para anular y sancionar en el Tribunal</p>
+          </div>
+        </div>
+        <button id="btn-close-superadmin-login" class="btn-icon" aria-label="Cerrar modal">&times;</button>
+      </div>
+      <form id="superadmin-login-form" class="auth-modal-form" autocomplete="off">
+        <div class="auth-form-body">
+          <div class="form-group">
+            <label for="admin-user-input" class="form-label">Usuario de la Corte</label>
+            <input type="text" id="admin-user-input" class="form-input" placeholder="Ingresá usuario autorizado" required autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label for="admin-pass-input" class="form-label">Clave Criptográfica</label>
+            <input type="password" id="admin-pass-input" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <div id="auth-error-msg" class="auth-error-msg hidden"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btn-cancel-auth" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" id="btn-submit-auth" class="btn btn-primary btn-submit-auth">
+            <span class="btn-auth-text">Ingresar a la Corte 🛡️</span>
+            <span class="btn-auth-loader hidden"><span class="spinner"></span> Verificando...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Pop-up de Éxito de Apelación (PRG Notificación) -->
+  <div id="appeal-success-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card modal-card-success text-center">
+      <div class="modal-success-icon">⚖️🔨✨</div>
+      <h3 id="appeal-success-title">¡Veredicto Anulado con Éxito!</h3>
+      <p id="appeal-success-desc" class="modal-success-desc">
+        La apelación fue procesada en el Ciclotrón: se restituyó el aura al afectado y se castigó al acusador por falso testimonio.
+      </p>
+      <div class="modal-footer justify-center">
+        <button id="btn-close-appeal-success" class="btn btn-primary">Entendido 🗿</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Confirmación Tribunal -->
   <div id="tribunal-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="tribunal-modal-title">
@@ -332,7 +393,18 @@
               </svg>
               <span>Volver al Ranking</span>
             </button>
-            <span class="tribunal-badge-pill">CORTE SUPREMA DE AURA ⚖️</span>
+            <div class="tribunal-nav-right">
+              <div id="superadmin-auth-widget" class="superadmin-auth-widget">
+                <button id="btn-open-superadmin-login" class="btn-superadmin-login" title="Ingresar como Magistrado para dictar veredictos">
+                  <span>🔐 Acceso Superadmin</span>
+                </button>
+                <div id="superadmin-logged-pill" class="superadmin-logged-pill hidden">
+                  <span class="superadmin-tag">👑 Superadmin Activo</span>
+                  <button id="btn-superadmin-logout" class="btn-superadmin-logout" title="Cerrar sesión de Superadmin">&times; Salir</button>
+                </div>
+              </div>
+              <span class="tribunal-badge-pill">CORTE SUPREMA DE AURA ⚖️</span>
+            </div>
           </div>
 
           <!-- Hero Layout with El Profeta as Presiding Supreme Judge -->
